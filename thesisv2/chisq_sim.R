@@ -4,8 +4,8 @@ library(doParallel)
 
 # run coru_data first
 
-cwe <- cwe.sim
-cnv <- cnv.sim
+cwe <- cwe.wages
+cnv <- cnv.wages
 
 n <- cnv$n
 R <- cnv$R
@@ -14,6 +14,18 @@ Sigma.hat <- cnv$Sigma.hat
   
 Sigma.R <- R %*% Sigma.hat %*% t(R)
 evs <- eigen(Sigma.R)$values
+
+
+find.alpha.bound <- function (evs, alpha = 0.05) {
+  imhof.value <- function (point) { 
+    (CompQuadForm::imhof(q = point, lambda = evs)$Qq - alpha)**2
+  }
+  
+  optim(0.1, 
+    imhof.value,
+    method = "BFGS")
+}
+
 
 
 # Simulate gen. chi^2 vars with estimated vcov matrix from wages dataset
@@ -51,13 +63,13 @@ rm(cl)
 
 # package CompQuadForm for the "true" distribution
 {
-  step.size <- 0.05
-  step.end <- 10
+  step.size <- 0.005
+  step.end <- 0.5
   pts.imhof <- rep(NA, step.end / step.size)
   xs.imhof <- seq(0, step.end - step.size, by = step.size)
   for (point in xs.imhof) {
     pts.imhof[point * (1 / step.size) + 1] <- 
-      (1 - imhof(q = point, lambda = evs)$Qq)
+      (1 - CompQuadForm::imhof(q = point, lambda = evs)$Qq)
   }
   
   grad.imhof <- pracma::gradient(pts.imhof, h1 = step.size)
@@ -92,10 +104,10 @@ zs <- rmvnorm(
 
 #
 
-plot(
+lines(
   x = xs.imhof,
   y = pracma::gradient(pts.imhof, h1 = step.size), 
-  col = "red",
+  col = "green",
   type = "l",
   lty = 2)
 lines(

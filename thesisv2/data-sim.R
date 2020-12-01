@@ -4,21 +4,10 @@
 nperson <- 20
 nobs <- 10
 
-# In order for unobserved person effects to be a problem they must be
-# correlated with the explanatory variable.
-
-# Let's say: x = x.base + fe
-fe.sd <- 0.01 # std dev of fixed effect
+fe.sd <- 0.01 
 x.sd <- 1.5
 u.sd <- 0.01
-
 beta <- 2
-
-# First generate our data using the time constant effects
-constantdata <- data.frame(id = 1:nperson, fe = rnorm(nperson, sd = fe.sd))
-
-# We expand our data by nobs
-fulldata <- constantdata[rep(1:nperson, each = nobs), ]
 
 # Add a time index, first define a group apply function
 # that applies by group index.
@@ -29,54 +18,58 @@ gapply <- function(x, group, fun) {
   returner
 }
 
-# Using the generalized apply function coded above
-fulldata$t <- gapply(rep(1, length(fulldata$id)), 
-  group = fulldata$id, 
-  fun = cumsum)
 
+B <- 200
+C <- 20
+p.vals.total <- matrix(NA, nrow = B, ncol = C)
+for (cdx in 1:C) {
+hits <- 0
+p.vals <- rep(NA, B)
+for (bdx in 1:B) {
+  # First generate our data using the time constant effects
+  constantdata <- data.frame(id = 1:nperson, fe = rnorm(nperson, sd = fe.sd))
+  
+  # We expand our data by nobs
+  fulldata <- constantdata[rep(1:nperson, each = nobs), ]
+  
+  # Using the generalized apply function coded above
+  fulldata$t <- gapply(rep(1, length(fulldata$id)), 
+    group = fulldata$id, 
+    fun = cumsum)
 
-{
   # Now we are ready to calculate the time variant xs
+  # And our unobservable error
   fulldata$x <- fulldata$fe + rnorm(nobs * nperson, sd = x.sd)
   fulldata$x2 <- rnorm(nobs * nperson, mean = 2, sd = 2)
-    #runif(nobs * nperson, min = 0, max = 5)
-  
-  # And our unobservable error
   fulldata$u <- rnorm(nobs * nperson, mean = 0, sd = u.sd)
   
   # Finally we are ready to simulate our y variables
-  fulldata$y <- beta * fulldata$x + fulldata$x2 + .5 * fulldata$fe + fulldata$u
-}
+  fulldata$y <- beta * fulldata$x +  .5 * fulldata$fe + fulldata$u
 
-# First lets see how our standard linear model performs:
-#summary(lm(y ~ x, data = fulldata))
-#plot(lm(y ~ x, data = fulldata))
-
-# Adding a dummy variable removes the bias
-#summary(lm(y ~ x + factor(id), data = fulldata))
-
-
-
-
-{
   fulldata.plm <- pdata.frame(fulldata, index = c("id", "t"))
   cwe.sim <- consistency.within.est(panel.set = fulldata.plm, 
     dep.var = c("y"), indep.vars = c("x"), 
     group.index = c("id"), time.index = "t")
-  cnv.sim <- consistency.within.est(panel.set = fulldata.plm, 
-    dep.var = c("y"), indep.vars = c("x"), 
-    group.index = c("id"), time.index = "t", no.ginv = TRUE)
+  
+  if (cwe.sim$wald < cwe.sim$chisq.bound) { 
+    hits <- hits + 1 
+  }
+  p.vals[bdx] <- cwe.sim$p.value
 }
-plot(cwe.sim)
+p.vals.total[, cdx] <- p.vals
+}
+
+
 
 cwe.sim$wald
 cwe.sim$chisq.bound
-cnv.sim$wald
+cwe.sim$gen.wald
 
 model.plm <- plm(y ~ x, data = fulldata.plm, model = "within")
 summary(model.plm)
 model.lm <- lm(y ~ x + factor(id) - 1, data = fulldata.plm)
 summary(model.lm)
+
 
 
 # error correlated with indep vars
@@ -89,32 +82,35 @@ summary(model.lm)
 #Sigma <- diag(3)
 
 mu <- c(1, 0)
-Sigma <- diag(c(1, 0.1))
+Sigma <- diag(c(2, 1))
 
-rawvars <- MASS::mvrnorm(n = nobs * nperson, mu=mu, Sigma=Sigma)
-
-#cov(rawvars); cor(rawvars)
-#pvars <- pnorm(rawvars)
-#cov(pvars); cor(pvars)
-
-fulldata$raw1 <- rawvars[, 1]
-fulldata$rawerror <- rawvars[, 2]
-#fulldata$rawerror <- rawvars[, 3]
-
-fulldata$ycor <- beta * fulldata$raw1 + 0.5 * fulldata$fe + fulldata$rawerror
-
-fulldata.plm <- pdata.frame(fulldata, index = c("id", "t"))
-dv.sim.cor <- c("ycor")
-iv.sim.cor <- c("raw1")
-gid.sim.cor <- c("id")
-tid.sim.cor <- c("t")
-cwe.cor <- consistency.within.est(panel.set = fulldata.plm, 
-  dep.var = dv.sim.cor, indep.vars = iv.sim.cor, 
-  group.index = gid.sim.cor, time.index = tid.sim.cor)
-cnv.cor <- consistency.within.est(panel.set = fulldata.plm, 
-  dep.var = dv.sim.cor, indep.vars = iv.sim.cor, 
-  group.index = gid.sim.cor, time.index = tid.sim.cor, no.ginv = TRUE)
-plot(cwe.cor, main = "error corr with indep")
+B <- 100
+hits <- 0
+p.vals <- rep(NA, B)
+for (bdx in 1:B) {
+  rawvars <- MASS::mvrnorm(n = nobs * nperson, mu=mu, Sigma=Sigma)
+  
+  fulldata$raw1 <- rawvars[, 1]
+  fulldata$rawerror <- rawvars[, 2]
+  #fulldata$rawerror <- rawvars[, 3]
+  
+  fulldata$ycor <- beta * fulldata$raw1 + 0.5 * fulldata$fe + fulldata$rawerror
+  
+  fulldata.plm <- pdata.frame(fulldata, index = c("id", "t"))
+  dv.sim.cor <- c("ycor")
+  iv.sim.cor <- c("raw1")
+  gid.sim.cor <- c("id")
+  tid.sim.cor <- c("t")
+  cwe.cor <- consistency.within.est(panel.set = fulldata.plm, 
+    dep.var = dv.sim.cor, indep.vars = iv.sim.cor, 
+    group.index = gid.sim.cor, time.index = tid.sim.cor)
+  
+  if (cwe.cor$wald < cwe.cor$chisq.bound) { 
+    hits <- hits + 1 
+  }
+  p.vals[bdx] <- cwe.cor$p.value
+}
+#plot(cwe.cor, main = "error corr with indep")
 
 
 

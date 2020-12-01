@@ -32,7 +32,7 @@ consistency.within.est <- function(
   n <- as.numeric(count(unique(panel.set[, ..group.index])))
   Tt <- as.numeric(count(unique(panel.set[, ..time.index])))
   k <- length(indep.vars)
-  B <- diffMatrix(Tt, 1)
+  B <- diffMatrix(Tt - 1, 1)
   R <- kronecker(B, diag(k))
   
   # calcs
@@ -84,22 +84,20 @@ consistency.within.est <- function(
     inner.vcov <- inner.vcov + t(stacked.x) %*% u.i %*% t(u.i) %*% stacked.x
   }
   
-  Sigma.hat <- solve((1 / n) * first.term.appC) %*% ((1 / n) * inner.vcov) %*% solve((1 / n) * first.term.appC)
-  
-  # TODO: ~~~~~~~~~~!!!!!!!!!!!!!! REMOVE ??????
-  Sigma.hat <- (1 / n) * Sigma.hat
-  
+  # Variance and standard error
+  Sigma.hat <- (1 / n) * solve((1 / n) * first.term.appC) %*% ((1 / n) * inner.vcov) %*% solve((1 / n) * first.term.appC)
   
   beta.std.err <- sqrt(diag(Sigma.hat) / n)
   
+  # Wald statistic 
+  wald <- t(beta.hat) %*% R %*% MASS::ginv(t(R) %*% Sigma.hat %*% R) %*% t(R) %*% beta.hat
+  chisq.bound <- qchisq(1 - alpha, df = (Tt - 2) * k)
+  p.value <- 1 - pchisq(wald, df = (Tt - 2) * k)
+  
+  gen.wald <- t(beta.hat) %*% R %*% t(R) %*% beta.hat
   
   
-  
-  
-  # plotting
-  # Keep current graphics settings
-  oldpar <- par(no.readonly = TRUE)
-  
+  # necessary for plotting
   beta.hat.unstacked <- matrix(nrow = k, ncol = Tt - 1)
   beta.std.err.unstacked <- matrix(nrow = k, ncol = Tt - 1)
   rownames(beta.hat.unstacked) <- indep.vars
@@ -110,17 +108,9 @@ consistency.within.est <- function(
     beta.std.err.unstacked[, idx] <- beta.std.err[rs:re]
   }
   
-  
-  if (no.ginv) {
-    wald <- t(beta.hat) %*% t(R) %*% R %*% beta.hat
-    chisq.bound <- NULL
-  } else {
-    wald <- t(beta.hat) %*% t(R) %*% MASS::ginv(R %*% Sigma.hat %*% t(R)) %*% R %*% beta.hat
-    chisq.bound <- qchisq(1 - alpha, df = (Tt - 2) * k)
-  }
-  
-  
+  # return object
   consist.test <- list(
+    k = k, n = n, Tt = Tt, R = R, B = B, alpha = alpha,
     within.est = within.est,
     beta.hat = beta.hat,
     beta.std.err = beta.std.err,
@@ -129,10 +119,12 @@ consistency.within.est <- function(
     Sigma.hat = Sigma.hat,
     wald = wald,
     chisq.bound = chisq.bound,
-    k = k, n = n, Tt = Tt, R = R, B = B, alpha = alpha, no.ginv = no.ginv)
+    p.value = p.value,
+    gen.wald = gen.wald)
   class(consist.test) <- "ConsistencyWithinEstimator"
   consist.test
 }
+
 
 # Plotting ====
 plot.ConsistencyWithinEstimator <- function (object, ...)

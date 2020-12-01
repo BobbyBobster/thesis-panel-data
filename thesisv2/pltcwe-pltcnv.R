@@ -17,6 +17,8 @@ plt.cwe <- function (cwe, step.size = 1, step.end = 100) {
     v = cwe$wald, 
     col = "green",
     lty = 1)
+  title(
+    paste("cwe wald ", cwe$wald, cwe$within.est$formula[2]))
   #legend(
   #  x = 75,
   #  y = 0.04,
@@ -30,7 +32,7 @@ plt.cnv <- function (cnv, step.size = 0.5, step.end = 40) {
   R <- cnv$R
   Tt <- cnv$Tt
     
-  Sigma.R <- R %*% Sigma.hat %*% t(R)
+  Sigma.R <- t(R) %*% Sigma.hat %*% R
   evs <- eigen(Sigma.R)$values
   
   # package CompQuadForm for the "true" distribution
@@ -38,7 +40,7 @@ plt.cnv <- function (cnv, step.size = 0.5, step.end = 40) {
   xs.imhof <- seq(0, step.end - step.size, by = step.size)
   for (point in xs.imhof) {
     pts.imhof[point * (1 / step.size)] <- 
-      (1 - imhof(q = point, lambda = evs)$Qq)
+      (1 - CompQuadForm::imhof(q = point, lambda = evs)$Qq)
   }
   
   if (step.size >= 1) {
@@ -58,9 +60,11 @@ plt.cnv <- function (cnv, step.size = 0.5, step.end = 40) {
     col = "red",
     lty = 2)
   abline(
-    v = cnv$wald, 
+    v = cnv$gen.wald, 
     col = "green",
     lty = 1)
+  title(
+    paste("cnv wald ", cnv$wald, cnv$within.est$formula[2]))
   #legend(
   #  x = 150,
   #  y = 0.025,

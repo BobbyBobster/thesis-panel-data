@@ -1,4 +1,39 @@
 
+{
+  plot(cwe.wages)
+ plt.cwe(cwe.wages)
+ plt.cnv(cnv.wages, 0.0002, 0.2)
+  plot(cwe.faostat)
+ plt.cwe(cwe.faostat)
+ plt.cnv(cnv.faostat, 0.03, 3)
+  plot(cwe.grunfeld)
+ plt.cwe(cwe.grunfeld)
+ plt.cnv(cnv.grunfeld, 0.01, 0.5)
+ #plot(cwe.prince)
+ #plt.cwe(cwe.prince)
+ #plt.cnv(cnv.prince)
+  plot(cwe.produc)
+ plt.cwe(cwe.produc)
+ plt.cnv(cnv.produc, 0.01, 2)
+  
+  # save all open plots
+  {
+    plots.dir.path <- list.files(tempdir(), pattern="rs-graphics", full.names = TRUE); 
+    plots.png.paths <- list.files(plots.dir.path, pattern=".png", full.names = TRUE)
+    file.copy(from=plots.png.paths, to="plot-pakket")
+    
+    plots.png.detials <- file.info(plots.png.paths)
+    plots.png.detials <- plots.png.detials[order(plots.png.detials$mtime),]
+    sorted.png.names <- gsub(plots.dir.path, "plot-pakket", row.names(plots.png.detials), fixed=TRUE)
+    numbered.png.names <- paste0("plot-pakket/", 1:length(sorted.png.names), ".png")
+    
+    # Rename all the .png files as: 1.png, 2.png, 3.png, and so on.
+    file.rename(from=sorted.png.names, to=numbered.png.names)
+  }
+}
+
+
+
 #### Wages ####
 {
   data("Wages", package = "plm")
@@ -13,10 +48,8 @@
   
   cwe.wages <- 
     consistency.within.est(wages, dv.wages, iv.wages, gid.wages, tid.wages)
-  #plot(cwe.wages)
-  cnv.wages <- 
-    consistency.within.est(wages, dv.wages, iv.wages, gid.wages, tid.wages, 
-      no.ginv = TRUE)
+  #cwe.wages.paper <- 
+  #  consistency.within.est.paper(wages, dv.wages, iv.wages, gid.wages, tid.wages)
   
   # within estimator
   wages.form <- as.formula(paste(dv.wages, paste(iv.wages, collapse=" + "), sep=" ~ "))
@@ -75,8 +108,6 @@
   
   cwe.faostat <-
     consistency.within.est(faostat, dv.faostat, iv.faostat, gid.faostat, tid.faostat)
-  cnv.faostat <-
-    consistency.within.est(faostat, dv.faostat, iv.faostat, gid.faostat, tid.faostat, no.ginv = TRUE)
   #plot(cwe.faostat)
   
   
@@ -86,6 +117,27 @@
   faostat.fd <- update(faostat.fe, model = "fd")
   summary(faostat.fe)
   summary(faostat.fd)
+}
+
+
+
+#### Labor Supply ####
+{
+  data(LaborSupply, package = "Ecdat")
+  LaborSupply$age.sq <- LaborSupply$age ** 2
+  labor <- pdata.frame(LaborSupply,
+    index = c("id", "year"),
+    drop.index = FALSE)
+  
+  dv.labor <- c("lnhr")
+  iv.labor <- c("lnwg", "age", "age.sq", "kids", "disab")
+  gid.labor <- c("id")
+  tid.labor <- c("year")
+  
+  cwe.labor <-
+    consistency.within.est(labor, dv.labor, iv.labor, gid.labor, tid.labor)
+  cnv.labor <-
+    consistency.within.est(labor, dv.labor, iv.labor, gid.labor, tid.labor, no.ginv = TRUE)
 }
 
 
@@ -107,8 +159,6 @@
   
   cwe.grunfeld <-
     consistency.within.est(grunfeld, dv.grunfeld, iv.grunfeld, gid.grunfeld, tid.grunfeld)
-  cnv.grunfeld <-
-    consistency.within.est(grunfeld, dv.grunfeld, iv.grunfeld, gid.grunfeld, tid.grunfeld, no.ginv = TRUE)
   #plot(cwe.grunfeld)
 }
 
@@ -127,8 +177,6 @@
   
   cwe.prince <-
     consistency.within.est(prince, dv.prince, iv.prince, gid.prince, tid.prince)
-  cnv.prince <-
-    consistency.within.est(prince, dv.prince, iv.prince, gid.prince, tid.prince, no.ginv = TRUE)
   #plot(cwe.prince)
 }
 
@@ -155,8 +203,6 @@
   
   cwe.produc <- 
     consistency.within.est(produc, dv.produc, iv.produc, gid.produc, tid.produc)
-  cnv.produc <- 
-    consistency.within.est(produc, dv.produc, iv.produc, gid.produc, tid.produc, no.ginv = TRUE)
   #plot(cwe.produc)
 }
 
