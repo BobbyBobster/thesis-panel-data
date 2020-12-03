@@ -1,4 +1,6 @@
 
+
+
 {
   plot(cwe.wages)
  plt.cwe(cwe.wages)

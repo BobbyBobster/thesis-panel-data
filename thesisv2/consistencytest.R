@@ -9,7 +9,7 @@ consistency.within.est <- function(
   group.index,
   time.index,
   alpha = 0.05,
-  no.ginv = FALSE) {
+  no.gen = FALSE) {
   
   # within estimator
   form <- as.formula(paste(dep.var, paste(indep.vars, collapse=" + "), sep=" ~ "))
@@ -94,7 +94,23 @@ consistency.within.est <- function(
   chisq.bound <- qchisq(1 - alpha, df = (Tt - 2) * k)
   p.value <- 1 - pchisq(wald, df = (Tt - 2) * k)
   
-  gen.wald <- t(beta.hat) %*% R %*% t(R) %*% beta.hat
+  # Gen Wald statistic
+  if (!no.gen) {
+    gen.wald <- t(beta.hat) %*% R %*% t(R) %*% beta.hat
+    
+    Sigma.R <- t(R) %*% Sigma.hat %*% R
+    evs <- eigen(Sigma.R)$values
+    
+    imhof.value <- function (point) { 
+      (1 - CompQuadForm::imhof(q = point, lambda = evs)$Qq - (1 - alpha))
+    }
+    gen.chisq.bound <- uniroot(imhof.value, c(0, 5))$root
+    gen.p.value <- CompQuadForm::imhof(q = gen.wald, lambda = evs)
+  } else {
+    gen.wald <- NA
+    gen.chisq.bound <- NA
+    gen.p.value <- NA
+  }
   
   
   # necessary for plotting
@@ -120,7 +136,9 @@ consistency.within.est <- function(
     wald = wald,
     chisq.bound = chisq.bound,
     p.value = p.value,
-    gen.wald = gen.wald)
+    gen.wald = gen.wald,
+    gen.chisq.bound = gen.chisq.bound,
+    gen.p.value = gen.p.value)
   class(consist.test) <- "ConsistencyWithinEstimator"
   consist.test
 }
@@ -129,25 +147,25 @@ consistency.within.est <- function(
 # Plotting ====
 plot.ConsistencyWithinEstimator <- function (object, ...)
 {
-  oldpar <- par(no.readonly = TRUE)
+  #oldpar <- par(no.readonly = TRUE)
   
   # Create nice rectangle of plots 
-  plt.row <- round(sqrt(object$k))
-  plt.col <- ceiling(sqrt(object$k))
-  par(
-    mfrow = c(plt.row, plt.col),
-    mar = c(5.1, 4.1, 0.1, 2.1),
-    oma = c(0, 0, 4, 0)
-  )
+  #plt.row <- round(sqrt(object$k))
+  #plt.col <- ceiling(sqrt(object$k))
+  #par(
+  #  mfrow = c(plt.row, plt.col),
+  #  mar = c(5.1, 4.1, 0.1, 2.1),
+  #  oma = c(0, 0, 4, 0)
+  #)
   
   for (row in 1:object$k) {
     plot(object$beta.hat.unstacked[row, ], 
       type = "b", 
       xlab = "timespan",
       ylab = rownames(object$beta.hat.unstacked)[row],
-      ylim = c(
-        min(object$beta.hat.unstacked[row, ]) - abs(max(object$beta.std.err.unstacked[row, ]) * 2),
-        max(object$beta.hat.unstacked[row, ]) + abs(max(object$beta.std.err.unstacked[row, ]) * 2)),
+      #ylim = c(
+      #  min(object$beta.hat.unstacked[row, ]) - abs(max(object$beta.std.err.unstacked[row, ]) * 2),
+      #  max(object$beta.hat.unstacked[row, ]) + abs(max(object$beta.std.err.unstacked[row, ]) * 2)),
       ...)
     abline(h = object$within.est$coefficients[row], lty = 3)
     abline(h = 0, lty = 2)
@@ -161,5 +179,29 @@ plot.ConsistencyWithinEstimator <- function (object, ...)
       length = 0.05)
   }
   # reset old graphics params
-  par(oldpar)
+  #par(oldpar)
+}
+
+lines.ConsistencyWithinEstimator <- function (object, ...)
+{
+  for (row in 1:object$k) {
+    lines(object$beta.hat.unstacked[row, ], 
+      type = "b", 
+      xlab = "timespan",
+      ylab = rownames(object$beta.hat.unstacked)[row],
+      #ylim = c(
+      #  min(object$beta.hat.unstacked[row, ]) - abs(max(object$beta.std.err.unstacked[row, ]) * 2),
+      #  max(object$beta.hat.unstacked[row, ]) + abs(max(object$beta.std.err.unstacked[row, ]) * 2)),
+      ...)
+    abline(h = object$within.est$coefficients[row], lty = 3)
+    abline(h = 0, lty = 2)
+    arrows(
+      x0 = 1:(object$Tt - 1), 
+      y0 = object$beta.hat.unstacked[row, ] - 1.96 * object$beta.std.err.unstacked[row, ],
+      x1 = 1:(object$Tt - 1),
+      y1 = object$beta.hat.unstacked[row, ] + 1.96 * object$beta.std.err.unstacked[row, ],
+      code = 3,
+      angle = 90,
+      length = 0.05)
+  }
 }

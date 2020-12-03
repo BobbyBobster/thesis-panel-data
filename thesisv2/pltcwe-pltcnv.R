@@ -1,4 +1,4 @@
-plt.cwe <- function (cwe, step.size = 1, step.end = 100) {
+plt.cwe <- function (cwe, step.size = 1, step.end = 100, ...) {
   df <- cwe$k * (cwe$Tt - 2)
   
   xs.chisq <- seq(0, step.end - step.size, by = step.size)
@@ -8,7 +8,8 @@ plt.cwe <- function (cwe, step.size = 1, step.end = 100) {
     x = xs.chisq,
     y = pts.chisq,
     type = "l", 
-    lty = 1)
+    lty = 1,
+    ...)
   abline(
     v = cwe$chisq.bound, 
     col = "red", 
@@ -17,7 +18,7 @@ plt.cwe <- function (cwe, step.size = 1, step.end = 100) {
     v = cwe$wald, 
     col = "green",
     lty = 1)
-  title(
+  title(sub =
     paste("cwe wald ", cwe$wald, cwe$within.est$formula[2]))
   #legend(
   #  x = 75,
@@ -27,7 +28,7 @@ plt.cwe <- function (cwe, step.size = 1, step.end = 100) {
   #  lty = c(1, 1, 2, 2))
 }
 
-plt.cnv <- function (cnv, step.size = 0.5, step.end = 40) {
+plt.cnv <- function (cnv, step.size = 0.5, step.end = 40, ...) {
   Sigma.hat <- cnv$Sigma.hat
   R <- cnv$R
   Tt <- cnv$Tt
@@ -54,7 +55,9 @@ plt.cnv <- function (cnv, step.size = 0.5, step.end = 40) {
     y = pracma::gradient(pts.imhof, h1 = step.size), 
     col = "black",
     type = "l",
-    lty = 1)
+    lty = 1,
+    ...)
+  #lines(x = xs.imhof, y = pts.imhof)
   abline(
     v = crit.val,
     col = "red",
@@ -63,8 +66,8 @@ plt.cnv <- function (cnv, step.size = 0.5, step.end = 40) {
     v = cnv$gen.wald, 
     col = "green",
     lty = 1)
-  title(
-    paste("cnv wald ", cnv$wald, cnv$within.est$formula[2]))
+  title(sub =
+    paste("cnv wald ", cnv$wald, cnv$within.est$formula[2], "\n crit.val ", crit.val))
   #legend(
   #  x = 150,
   #  y = 0.025,
@@ -72,3 +75,4 @@ plt.cnv <- function (cnv, step.size = 0.5, step.end = 40) {
   #  col = c("blue", "red", "green"), 
   #  lty = c(1, 2, 1))
 }
+
