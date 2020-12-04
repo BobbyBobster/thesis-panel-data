@@ -18,10 +18,10 @@ for (nobs in Ts) {
   print(paste("nobs", nobs))
   for (rho.lag in rhos) {
     print(paste("rho.lag", rho.lag))
-    fulldata <- data.creation(nobs, rho.lag, nperson = 1000)
+    fulldata <- data.creation(nobs, rho.lag)
     for (B.size in ns) {
       print(paste("B.size", B.size))
-      all.bootys[booty.counter, 1:6] <- bootstrapper(fulldata, B.size, B = 100, nperson = 1000, replace = FALSE)
+      all.bootys[booty.counter, 1:6] <- bootstrapper(fulldata, B.size, B = 500, replace = FALSE)
       all.bootys[booty.counter, 7:9] <- c(nobs, rho.lag, B.size)
       print(paste("result", all.bootys[booty.counter, ]))
       booty.counter <- booty.counter + 1
