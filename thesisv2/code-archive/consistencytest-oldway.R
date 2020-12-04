@@ -1,5 +1,3 @@
-# consistency func test merge asap
-
 library(plm)
 library(data.table)
 library(tidyverse)
@@ -32,7 +30,6 @@ consistency.within.est <- function(
   panel.set <- as.data.table(panel.set)
   
   n <- as.numeric(count(unique(panel.set[, ..group.index])))
-  all.ids <- as.numeric(as.matrix(unique(panel.set[, ..group.index])))
   Tt <- as.numeric(count(unique(panel.set[, ..time.index])))
   k <- length(indep.vars)
   B <- diffMatrix(Tt - 1, 1)
@@ -42,7 +39,7 @@ consistency.within.est <- function(
   beta.hat <- rep(NA, times = k * (Tt - 1))
   first.term.appC <- matrix(0, nrow = (Tt - 1) * k, ncol = (Tt - 1) * k)
   second.term.appC <- matrix(0, nrow = (Tt - 1) * k, ncol = 1)
-  for (idx in all.ids) {
+  for (idx in 1:n) {
     x <- data.matrix(panel.set[id == idx][, ..indep.vars])
     stacked.x <- matrix(0, nrow = (Tt - 1) * Tt / 2, ncol = (Tt - 1) * k)
     for (timespan in 1:(Tt - 1)) {
@@ -66,7 +63,7 @@ consistency.within.est <- function(
   
   # vcov
   inner.vcov <- matrix(0, nrow = (Tt - 1) * k, ncol = (Tt - 1) * k)
-  for (idx in all.ids) {
+  for (idx in 1:n) {
     x <- data.matrix(panel.set[id == idx][, ..indep.vars])
     stacked.x <- matrix(0, nrow = (Tt - 1) * Tt / 2, ncol = (Tt - 1) * k)
     for (timespan in 1:(Tt - 1)) {
@@ -108,7 +105,7 @@ consistency.within.est <- function(
       (1 - CompQuadForm::imhof(q = point, lambda = evs)$Qq - (1 - alpha))
     }
     gen.chisq.bound <- uniroot(imhof.value, c(0, 5))$root
-    gen.p.value <- CompQuadForm::imhof(q = gen.wald, lambda = evs)$Qq
+    gen.p.value <- CompQuadForm::imhof(q = gen.wald, lambda = evs)
   } else {
     gen.wald <- NA
     gen.chisq.bound <- NA
@@ -150,25 +147,25 @@ consistency.within.est <- function(
 # Plotting ====
 plot.ConsistencyWithinEstimator <- function (object, ...)
 {
-  oldpar <- par(no.readonly = TRUE)
+  #oldpar <- par(no.readonly = TRUE)
   
   # Create nice rectangle of plots 
-  plt.row <- round(sqrt(object$k))
-  plt.col <- ceiling(sqrt(object$k))
-  par(
-    mfrow = c(plt.row, plt.col),
-    mar = c(5.1, 4.1, 0.1, 2.1),
-    oma = c(0, 0, 4, 0)
-  )
+  #plt.row <- round(sqrt(object$k))
+  #plt.col <- ceiling(sqrt(object$k))
+  #par(
+  #  mfrow = c(plt.row, plt.col),
+  #  mar = c(5.1, 4.1, 0.1, 2.1),
+  #  oma = c(0, 0, 4, 0)
+  #)
   
   for (row in 1:object$k) {
     plot(object$beta.hat.unstacked[row, ], 
       type = "b", 
       xlab = "timespan",
       ylab = rownames(object$beta.hat.unstacked)[row],
-      ylim = c(
-        min(object$beta.hat.unstacked[row, ]) - abs(max(object$beta.std.err.unstacked[row, ]) * 2),
-        max(object$beta.hat.unstacked[row, ]) + abs(max(object$beta.std.err.unstacked[row, ]) * 2)),
+      #ylim = c(
+      #  min(object$beta.hat.unstacked[row, ]) - abs(max(object$beta.std.err.unstacked[row, ]) * 2),
+      #  max(object$beta.hat.unstacked[row, ]) + abs(max(object$beta.std.err.unstacked[row, ]) * 2)),
       ...)
     abline(h = object$within.est$coefficients[row], lty = 3)
     abline(h = 0, lty = 2)
@@ -182,7 +179,7 @@ plot.ConsistencyWithinEstimator <- function (object, ...)
       length = 0.05)
   }
   # reset old graphics params
-  par(oldpar)
+  #par(oldpar)
 }
 
 lines.ConsistencyWithinEstimator <- function (object, ...)

@@ -4,15 +4,14 @@ library(doParallel)
 
 # run coru_data first
 
-cwe <- cwe.wages
-cnv <- cnv.wages
+cwe <- cnv <- cwe.sim
 
 n <- cnv$n
 R <- cnv$R
 Tt <- cnv$Tt
 Sigma.hat <- cnv$Sigma.hat
   
-Sigma.R <- R %*% Sigma.hat %*% t(R)
+Sigma.R <- t(R) %*% Sigma.hat %*% R
 evs <- eigen(Sigma.R)$values
 
 
@@ -40,13 +39,13 @@ cl <- makeCluster(3, type="FORK")
 registerDoParallel(cl)
 clusterSetRNGStream(cl, iseed = 2020)
 {
-  N <- 5000
+  N <- 10
   xs <- rep(NA, N)
   xs <- foreach(1:N) %dopar% {
-    obs <- rmvnorm(n = 1, sigma = Sigma.R)
+    obs <- mvtnorm::rmvnorm(n = 1, sigma = Sigma.R)
     obs %*% t(obs)
   }
-  xs <- as.numeric(xs)
+  #xs <- as.numeric(xs)
 }
 #{
 #  N <- 5000

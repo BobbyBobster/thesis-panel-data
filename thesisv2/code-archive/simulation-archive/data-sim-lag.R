@@ -5,7 +5,7 @@
 ## econometricsbysimulation.com
 # and http://online.sfsu.edu/mbar/ECON312_files/OmittedSimul.html
 nperson <- 100
-nobs <- 10 + 1
+nobs <- 5 + 1
 
 # Main equation 
 #fe.sd <- 0.6019
