@@ -20,7 +20,10 @@ colnames(truetab) <-
 xtable::print.xtable(xtable::xtable(truetab, type = "latex"), filename = "powertab.tex")
 
 f.d <- data.creation(5, 0.6, 1000)
-bootys.fiddle <- bootstrapper(fulldata = f.d, B.size = 100, B = 100, nperson = 1000, replace = FALSE)
+bootys.fiddle <- bootstrapper(fulldata = f.d, B.size = 500, B = 100, nperson = 1000, replace = FALSE)
+
+
+tab.sim <- `data-sim-script_results`$all.bootys
 
 
   

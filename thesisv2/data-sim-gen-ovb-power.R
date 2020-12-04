@@ -1,4 +1,4 @@
-data.creation <- function (nobs, rho.lag, nperson = 5000) {
+data.gen.ovb.power <- function (nobs, rho.lag, nperson = 5000) {
 #nperson <- 5000
 #nobs <- 10
 

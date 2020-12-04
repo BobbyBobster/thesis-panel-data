@@ -1,14 +1,14 @@
 library(doParallel)
-bootstrapper <- function (fulldata, B.size, B, nperson = 5000, replace = TRUE) {
+bootstrapper <- function (fulldata, B.size, B, nperson = 5000, replace = FALSE) {
   #B <- 500
   #B.size <- 500
     
   #cl <- makeCluster(3, type="FORK")
   #registerDoParallel(cl)
   #clusterSetRNGStream(cl, iseed = NULL)
-
+  
   booty <- foreach (1:B) %dopar% {
-    accepts <- gen.accepts <- 0
+    accepts <- gen.accepts <- agreements <- 0
     
     sample.ids <- sample(1:nperson, size = B.size, replace = replace)
     sampledata <- fulldata[id %in% sample.ids]
@@ -26,21 +26,26 @@ bootstrapper <- function (fulldata, B.size, B, nperson = 5000, replace = TRUE) {
     if (cwe.sim$gen.wald < cwe.sim$gen.chisq.bound) {
       gen.accepts <- 1
     }
+    if (accepts == gen.accepts) {
+      agreements <- 1
+    }
     
     c(accepts, cwe.sim$p.value, 
       gen.accepts, cwe.sim$gen.p.value,
       cwe.sim$within.est$coefficients,
-      plm(y ~ x2, data = sampledata.plm, model = "pooling")$coefficients[2]) 
+      plm(y ~ x2, data = sampledata.plm, model = "pooling")$coefficients[2],
+      agreements) 
   }
   booty <- matrix(unlist(booty), ncol = lengths(booty)[1], byrow = TRUE)
   colnames(booty) <- 
     c("wald.accepts", "p.vals", "gen.wald.accepts", "gen.p.vals", 
-      "within.ests", "pooled.ests")
+      "within.ests", "pooled.ests",
+      "agreements")
   
   c(sum(booty[, 1]), mean(booty[, 2]),
-    sum(booty[,3]), mean(booty[, 4]), 
-    mean(booty[, 5]),
-    mean(booty[, 6]))
+    sum(booty[, 3]), mean(booty[, 4]), 
+    mean(booty[, 5]), mean(booty[, 6]),
+    sum(booty[, 7]))
   
   #stopCluster(cl)
   #rm(cl)
