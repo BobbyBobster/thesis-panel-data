@@ -1,11 +1,17 @@
 library(doParallel)
 
 
-sim.type <- c("OVB power")
+
+sim.type <- c("ME size") # change function
+file.name <- c("me-size-output.txt")
 nperson <- 5000
 B <- 500
 replace <- FALSE
 
+print.and.cat <- function (output.str, file = file.name) {
+  print(output.str)
+  cat(c(output.str, "\n"), file = file.name, append = TRUE)
+}
 
 ns <- c(100, 500, 1000)
 rhos <- c(0.6, 0.9)
@@ -21,26 +27,26 @@ cl <- makeCluster(3, type="FORK")
 registerDoParallel(cl)
 clusterSetRNGStream(cl, iseed = NULL)
 
-print("Running simulation")
-print(sim.type)
-print(paste("nperson:", nperson))
-print(paste("B:", B))
-print(paste("replace:", replace))
+print.and.cat("Running simulation")
+print.and.cat(sim.type)
+print.and.cat(paste("nperson:", nperson))
+print.and.cat(paste("B:", B))
+print.and.cat(paste("replace:", replace))
 
 booty.counter <- 1
 for (nobs in Ts) {
-  print(paste("nobs", nobs))
+  print.and.cat(paste("nobs", nobs))
   for (rho.lag in rhos) {
-    print(paste("rho.lag", rho.lag))
-    fulldata <- data.gen.ovb.power(nobs, rho.lag, nperson = nperson) # power vs. size
+    print.and.cat(paste("rho.lag", rho.lag))
+    fulldata <- data.gen.me.size(nobs, rho.lag, nperson = nperson) # power vs. size
     for (B.size in ns) {
-      print(paste("B.size", B.size))
+      print.and.cat(paste("B.size", B.size))
       all.bootys[booty.counter, 1:7] <- 
         bootstrapper(fulldata, B.size, B = B, nperson = nperson, replace = replace)
       all.bootys[booty.counter, 8:10] <- c(nobs, rho.lag, B.size)
-      print(paste("result", all.bootys[booty.counter, ]))
+      print.and.cat(all.bootys[booty.counter, ])
       booty.counter <- booty.counter + 1
-      print(booty.counter)
+      print.and.cat(booty.counter)
     }
   }
 }
