@@ -2,7 +2,7 @@
 
 library(plm)
 library(data.table)
-library(tidyverse)
+library(dplyr)
 
 consistency.within.est <- function(
   panel.set, 
