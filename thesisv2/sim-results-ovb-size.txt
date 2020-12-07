@@ -31,6 +31,7 @@
 
 
 # Monte Carlo
+# B = 500
 > `data-sim-script-mc_results`$all.montes
       wald.accepts    p.vals gen.wald.accepts gen.p.vals within.ests pooled.ests agreements Tt rho.lag samplesize
  [1,]          465 0.4609548              465  0.4689831    1.998636    2.000554        470  5     0.6        100
