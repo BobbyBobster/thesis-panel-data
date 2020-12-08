@@ -1,6 +1,6 @@
 library(doParallel)
 
-sim.type <- c("OVB size MC") # change function
+sim.type <- c("ME size MC") # change function
 file.name <- c("me-size-output-mc.txt")
 B <- 500
 
@@ -35,7 +35,7 @@ for (nobs in Ts) {
     for (B.size in ns) {
       print.and.cat(paste("B.size", B.size))
       all.montes[monte.counter, 1:7] <- 
-        montecarlo(data.gen.ovb.size, nobs = nobs, rho.lag = rho.lag, nperson = B.size, num.sims = B)
+        montecarlo(data.gen.me.size, nobs = nobs, rho.lag = rho.lag, nperson = B.size, num.sims = B)
       all.montes[monte.counter, 8:10] <- c(nobs, rho.lag, B.size)
       print.and.cat(all.montes[monte.counter, ])
       monte.counter <- monte.counter + 1
