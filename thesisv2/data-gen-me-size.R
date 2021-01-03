@@ -2,7 +2,7 @@ data.gen.me.size <- function (nobs, rho.lag, nperson = 5000) {
   fe.sd <- 1
   eps.sd <- 1
   theta.sd <- 1.2
-  eta.sd <- 0
+  eta.sd <- 0     # No eta so x2 == ksi so no ME
   theta.eta.cov <- rbind(
     c(theta.sd**2, 0),
     c(0, eta.sd**2))
@@ -39,8 +39,8 @@ data.gen.me.size <- function (nobs, rho.lag, nperson = 5000) {
   eps <- rnorm(nobs * nperson, mean = 0, sd = eps.sd)
   
   fulldata$y <- 
-    #fulldata$fe + 
-    beta * fulldata$x2 + 
+    fulldata$fe + 
+    beta * fulldata$ksi + 
     eps
   
   fulldata <- as.data.table(fulldata)

@@ -1,4 +1,4 @@
-data.gen.me.power <- function (nobs, rho.lag, nperson = 5000) {
+data.gen.me.power <- function (nobs, rho.lag, nperson = 5000, delta.lag = 0.3) {
   fe.sd <- 1
   eps.sd <- 1
   theta.sd <- 1.2
@@ -8,7 +8,7 @@ data.gen.me.power <- function (nobs, rho.lag, nperson = 5000) {
     c(0, eta.sd**2))
   
   beta <- 1
-  delta.lag <- 0.3
+  #delta.lag <- 0.3
   
   
   gapply <- function(x, group, fun) {
@@ -36,12 +36,12 @@ data.gen.me.power <- function (nobs, rho.lag, nperson = 5000) {
   
   fulldata$x2 <- fulldata$ksi + fulldata$nu
   
-  eps <- rnorm(nobs * nperson, mean = 0, sd = eps.sd)
+  fulldata$eps <- rnorm(nobs * nperson, mean = 0, sd = eps.sd)
   
   fulldata$y <- 
-    #fulldata$fe + 
-    beta * fulldata$x2 + 
-    eps
+    fulldata$fe + 
+    beta * fulldata$ksi + 
+    fulldata$eps
   
   fulldata <- as.data.table(fulldata)
 }

@@ -1,7 +1,10 @@
-montecarlo <- function (data.gen.fun, nobs, rho.lag, nperson, num.sims) {
-  #cl <- makeCluster(3, type="FORK")
-  #registerDoParallel(cl)
-  #clusterSetRNGStream(cl, iseed = NULL)
+montecarlo <- function (data.gen.fun, nobs, rho.lag, nperson, num.sims, make.cluster = FALSE) {
+  if (make.cluster) {
+    cl <- makeCluster(3, type="FORK")
+    registerDoParallel(cl)
+    clusterSetRNGStream(cl, iseed = NULL)
+  }
+  
   
   booty <- foreach (1:num.sims) %dopar% {
     accepts <- gen.accepts <- agreements <- 0
@@ -14,10 +17,16 @@ montecarlo <- function (data.gen.fun, nobs, rho.lag, nperson, num.sims) {
       group.index = c("id"), time.index = c("t"),
       alpha = 0.05, no.gen = FALSE)
     
-    if (cwe.sim$wald < cwe.sim$chisq.bound) { 
+    if (cwe.sim$p.value >= 0.05) { 
       accepts <- 1
     }
-    if (cwe.sim$gen.wald < cwe.sim$gen.chisq.bound) {
+    if ((cwe.sim$p.value >= 0.05 && cwe.sim$wald < cwe.sim$chisq.bound) || 
+        (cwe.sim$p.value < 0.05 && cwe.sim$wald >= cwe.sim$chisq.bound)) {
+      print("wtf is wrong with the p-value?")
+    }
+      
+      
+    if (cwe.sim$gen.p.value >= 0.05) {
       gen.accepts <- 1
     }
     if (accepts == gen.accepts) {
@@ -28,44 +37,22 @@ montecarlo <- function (data.gen.fun, nobs, rho.lag, nperson, num.sims) {
       gen.accepts, cwe.sim$gen.p.value,
       cwe.sim$within.est$coefficients,
       plm(y ~ x2, data = fulldata, model = "pooling")$coefficients[2],
-      agreements) 
+      agreements, cwe.sim$R.sq, cwe.sim$rss, cwe.sim$tss) 
   }
   booty <- matrix(unlist(booty), ncol = lengths(booty)[1], byrow = TRUE)
   colnames(booty) <- 
     c("wald.accepts", "p.vals", "gen.wald.accepts", "gen.p.vals", 
       "within.ests", "pooled.ests",
-      "agreements")
+      "agreements", "R.sq", "rss", "tss")
   
+  if (make.cluster) {
+    stopCluster(cl)
+    rm(cl)
+  }
+  
+  rsq <- 1 - sum(booty[, 9])/sum(booty[, 10])
   c(sum(booty[, 1]), mean(booty[, 2]),
     sum(booty[, 3]), mean(booty[, 4]), 
     mean(booty[, 5]), mean(booty[, 6]),
-    sum(booty[, 7]))
-  
-  #stopCluster(cl)
-  #rm(cl)
+    sum(booty[, 7]), rsq)
 }
-
-
-#{
-#withins <- hist(booty[, 3], breaks = 10, plot = FALSE)
-#pooleds <- hist(booty[, 4], breaks = 10, plot = FALSE)
-#plot(withins, col=rgb(0,0,1,1/4), xlim = c(0,5), main = "", xlab = NA)
-#plot(pooleds, col=rgb(1,0,0,1/4), xlim = c(0,5), add = TRUE)
-#abline(v = beta2, col = "green", lty = 1)
-##legend(
-##  x = 2.5, y = 20,
-##  legend = c("withins", "pooleds", "true beta2 == 2.0"),
-##  col = c("blue", "red", "green"),
-##  lty = c(1, 1))
-#title(
-#  main = paste(
-#    "model y ~ x2 \n",
-#    "test accepts:", total.accepts / B, " gen test accepts:", total.gen.accepts / B, "\n"
-#    #"DGP: y = b1 + b2 * x2 + u, \n",
-#    #"DGP: y = b1 + b2 * x2 + b3 * x3 + fe + u, \n",
-#    #"where: x3 = d1 + d2 * x2 + e \n",
-#  ),
-#  sub = paste(
-#    "bootstrap samples:", B, " sample size:", B.size, "\n",
-#    "time periods:", nobs))
-#}

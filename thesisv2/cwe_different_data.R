@@ -50,15 +50,30 @@
   
   cwe.wages <- 
     consistency.within.est(wages, dv.wages, iv.wages, gid.wages, tid.wages)
-  #cwe.wages.paper <- 
-  #  consistency.within.est.paper(wages, dv.wages, iv.wages, gid.wages, tid.wages)
   
   # within estimator
-  wages.form <- as.formula(paste(dv.wages, paste(iv.wages, collapse=" + "), sep=" ~ "))
-  wages.est <- plm(
-    wages.form,
+  wages.form <- lwage ~ 
+    exp + I(exp ** 2) + wks + bluecol + ind + south + smsa + married + union +
+    sex + black + ed
+  #wages.form.old <- as.formula(paste(dv.wages, paste(iv.wages, collapse=" + "), sep=" ~ "))
+  wages.po <- plm(wages.form, data = wages, model = "pooling")
+  wages.fe <- plm(wages.form, data = wages, model = "within")
+  wages.re <- plm(wages.form, data = wages, model = "random")
+  wages.fd <- plm(wages.form, data = wages, model = "fd")
+  # HT - Hausman Taylor (1981)
+  ht <- plm(
+    lwage ~ 
+      exp + I(exp ** 2) + wks + bluecol + ind + south + smsa + married + union +
+      sex + black + ed |
+      bluecol + south + smsa + ind + sex + black |
+      wks + married + union + exp + I(exp ^ 2), 
     data = wages,
-    model = "within")
+    random.method = "ht", model = "random", inst.method = "baltagi")
+  summary(ht)
+  summary(wages.po)
+  summary(wages.fe)
+  summary(wages.re)
+  summary(wages.fd)
 }
 
 
@@ -67,31 +82,35 @@
 {
   output.full <- 
     readr::read_csv(file = "../datasets/faostat/Macro-Statistics_Key_Indicators_E_All_Data_(Normalized).csv") %>% 
-    filter(Item == "Value Added (Agriculture, Forestry and Fishing)") %>% 
-    filter(Element == "Value US$") %>% 
-    select(AreaCode = "Area Code", Area, Year, Output = Value) 
+    dplyr::filter(Item == "Value Added (Agriculture, Forestry and Fishing)") %>% 
+    dplyr::filter(Element == "Value US$") %>% 
+    select(AreaCode = "Area Code", Area, Year, Output = Value)
+      
   area.full <-
     readr::read_csv(file = "../datasets/faostat/Inputs_LandUse_E_All_Data_(Normalized).csv") %>% 
-    filter(Item == "Agricultural land") %>% 
+    dplyr::filter(Item == "Agricultural land") %>% 
     select(AreaCode = "Area Code", Area, Year, AgrArea = Value) 
+      
   pop.full <- 
     readr::read_csv(file = "../datasets/faostat/Employment_Indicators_E_All_Data_(Normalized).csv") %>% 
-    filter(Indicator == "Employment in agriculture") %>% 
+    dplyr::filter(Indicator == "Employment in agriculture") %>% 
     select(AreaCode = "Area Code", Area, Year, Pop = Value) 
+      
   govt.full <- 
     readr::read_csv(file = "../datasets/faostat/Investment_GovernmentExpenditure_E_All_Data_(Normalized).csv") %>% 
-    filter(Item == "Agriculture, forestry, fishing (Central Government)") %>% 
-    filter(Element == "Value US$") %>% 
-    select(AreaCode = "Area Code", Area, Year, Govt = Value) 
+    dplyr::filter(Element == "Value US$") %>% 
+    dplyr::filter(Item == "Agriculture, forestry, fishing (General Government)") %>% 
+    select(AreaCode = "Area Code", Area, Year, Govt = Value)
+    
   
   from.Year <- 2002
-  till.Year <- 2013
-  output <- output.full %>% filter(Year >= from.Year & Year <= till.Year)
-  area <- area.full %>% filter(Year >= from.Year & Year <= till.Year)
-  pop <- pop.full %>% filter(Year >= from.Year & Year <= till.Year)
-  govt <- govt.full %>% filter(Year >= from.Year & Year <= till.Year)
+  till.Year <- 2007
+  output <- output.full %>% dplyr::filter(Year >= from.Year & Year <= till.Year)
+  area <- area.full     %>% dplyr::filter(Year >= from.Year & Year <= till.Year)
+  pop <- pop.full       %>% dplyr::filter(Year >= from.Year & Year <= till.Year)
+  govt <- govt.full     %>% dplyr::filter(Year >= from.Year & Year <= till.Year)
   faostat <- output %>% left_join(area) %>% left_join(pop) %>% left_join(govt) %>% 
-    group_by(Area) %>% filter(all(!is.na(AgrArea)) & all(!is.na(Pop)) & all(!is.na(Govt))) %>% 
+    group_by(Area) %>% dplyr::filter(all(!is.na(AgrArea)) & all(!is.na(Pop)) & all(!is.na(Govt))) %>% 
     ungroup()
   
   faostat <- faostat %>% mutate(Id = as.numeric(factor(AreaCode)))
@@ -110,13 +129,16 @@
   
   cwe.faostat <-
     consistency.within.est(faostat, dv.faostat, iv.faostat, gid.faostat, tid.faostat)
-  #plot(cwe.faostat)
+  plot(cwe.faostat)
   
   
   faostat.form <- loutput ~ lagrarea + lpop + lgovt
   faostat.fe <- plm(faostat.form, data = faostat, model = "within")
+  faostat.po <- update(faostat.fe, model = "pooling")
   faostat.re <- update(faostat.fe, model = "random")
   faostat.fd <- update(faostat.fe, model = "fd")
+  summary(faostat.po)
+  summary(faostat.re)
   summary(faostat.fe)
   summary(faostat.fd)
 }
@@ -137,9 +159,7 @@
   tid.labor <- c("year")
   
   cwe.labor <-
-    consistency.within.est(labor, dv.labor, iv.labor, gid.labor, tid.labor)
-  cnv.labor <-
-    consistency.within.est(labor, dv.labor, iv.labor, gid.labor, tid.labor, no.ginv = TRUE)
+    consistency.within.est(labor, dv.labor, iv.labor, gid.labor, tid.labor, try.normal.inv = TRUE)
 }
 
 
@@ -162,6 +182,16 @@
   cwe.grunfeld <-
     consistency.within.est(grunfeld, dv.grunfeld, iv.grunfeld, gid.grunfeld, tid.grunfeld)
   #plot(cwe.grunfeld)
+  
+  grunfeld.form <- inv ~ value + capital
+  grunfeld.fe <- plm(grunfeld.form, data = grunfeld, model = "within")
+  grunfeld.po <- update(grunfeld.fe, model = "pooling")
+  grunfeld.re <- update(grunfeld.fe, model = "random")
+  grunfeld.fd <- update(grunfeld.fe, model = "fd")
+  summary(grunfeld.po)
+  summary(grunfeld.re)
+  summary(grunfeld.fe)
+  summary(grunfeld.fd)
 }
 
 #### Princeton ####
@@ -178,7 +208,7 @@
   tid.prince <- c("year")
   
   cwe.prince <-
-    consistency.within.est(prince, dv.prince, iv.prince, gid.prince, tid.prince)
+    consistency.within.est(prince, dv.prince, iv.prince, gid.prince, tid.prince, try.normal.inv = TRUE)
   #plot(cwe.prince)
 }
 
@@ -199,7 +229,7 @@
   produc <- pdata.frame(Produc, index = c("id", "year"))
   
   dv.produc <- c("lgsp")
-  iv.produc <- c("lpcap", "lpc", "lemp", "lunemp")
+  iv.produc <- c("lpcap", "lpc", "lemp", "unemp")
   gid.produc <- c("id")
   tid.produc <- c("year")
   

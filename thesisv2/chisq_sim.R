@@ -4,7 +4,7 @@ library(doParallel)
 
 # run coru_data first
 
-cwe <- cnv <- cwe.sim
+cwe <- cnv <- cwe.wages
 
 n <- cnv$n
 R <- cnv$R
@@ -14,6 +14,12 @@ Sigma.hat <- cnv$Sigma.hat
 Sigma.R <- t(R) %*% Sigma.hat %*% R
 evs <- eigen(Sigma.R)$values
 
+CompQuadForm::imhof(q = cwe$gen.wald, lambda = evs)$Qq
+
+
+
+
+evs <- c(4,1,0.5)
 
 find.alpha.bound <- function (evs, alpha = 0.05) {
   imhof.value <- function (point) { 
@@ -28,12 +34,24 @@ find.alpha.bound <- function (evs, alpha = 0.05) {
 
 
 # Simulate gen. chi^2 vars with estimated vcov matrix from wages dataset
-N <- 5000
+N <- 2000
+k <- rep(NA, N)
 x <- rep(NA, N)
+x.o <- rep(NA, N)
 for (idx in 1:N) {
-  obs <- rmvnorm(n = 1, sigma = Sigma.R)
+  obs <- mvtnorm::rmvnorm(n = 1, sigma = Sigma.R)
   x[idx] <- obs %*% t(obs)
+  
+  obs.o <- rnorm(n = 3)
+  x.o[idx] <- sum(evs * obs.o**2)
 }
+plot(density(x), col = "red")
+lines(density(x.o), col = "blue")
+#
+
+
+
+
 
 cl <- makeCluster(3, type="FORK")
 registerDoParallel(cl)
@@ -62,8 +80,8 @@ rm(cl)
 
 # package CompQuadForm for the "true" distribution
 {
-  step.size <- 0.005
-  step.end <- 0.5
+  step.size <- 0.1
+  step.end <- 20
   pts.imhof <- rep(NA, step.end / step.size)
   xs.imhof <- seq(0, step.end - step.size, by = step.size)
   for (point in xs.imhof) {
@@ -103,7 +121,7 @@ zs <- rmvnorm(
 
 #
 
-lines(
+plot(
   x = xs.imhof,
   y = pracma::gradient(pts.imhof, h1 = step.size), 
   col = "green",

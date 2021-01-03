@@ -11,7 +11,8 @@ consistency.within.est <- function(
   group.index,
   time.index,
   alpha = 0.05,
-  no.gen = FALSE) {
+  no.gen = FALSE,
+  try.normal.inv = FALSE) {
   
   # within estimator
   form <- as.formula(paste(dep.var, paste(indep.vars, collapse=" + "), sep=" ~ "))
@@ -64,8 +65,10 @@ consistency.within.est <- function(
   }
   beta.hat <- solve((1 / n) * first.term.appC) %*% ((1 / n) * second.term.appC)
   
-  # vcov
+  # vcov and R^2
   inner.vcov <- matrix(0, nrow = (Tt - 1) * k, ncol = (Tt - 1) * k)
+  rss <- matrix(0, nrow = 1, ncol = 1)
+  tss <- matrix(0, nrow = 1, ncol = 1)
   for (idx in all.ids) {
     x <- data.matrix(panel.set[id == idx][, ..indep.vars])
     stacked.x <- matrix(0, nrow = (Tt - 1) * Tt / 2, ncol = (Tt - 1) * k)
@@ -84,6 +87,8 @@ consistency.within.est <- function(
     
     u.i <- stacked.y - stacked.x %*% beta.hat
     
+    rss <- rss + t(u.i) %*% u.i
+    tss <- tss + t(stacked.y - mean(stacked.y)) %*% (stacked.y - mean(stacked.y))
     inner.vcov <- inner.vcov + t(stacked.x) %*% u.i %*% t(u.i) %*% stacked.x
   }
   
@@ -92,8 +97,16 @@ consistency.within.est <- function(
   
   beta.std.err <- sqrt(diag(Sigma.hat) / n)
   
+  # R^2
+  R.sq <- 1 - rss/tss
+  
+  
   # Wald statistic 
-  wald <- t(beta.hat) %*% R %*% MASS::ginv(t(R) %*% Sigma.hat %*% R) %*% t(R) %*% beta.hat
+  if (try.normal.inv) {
+    wald <- t(beta.hat) %*% R %*% solve(t(R) %*% Sigma.hat %*% R) %*% t(R) %*% beta.hat
+  } else {
+    wald <- t(beta.hat) %*% R %*% MASS::ginv(t(R) %*% Sigma.hat %*% R) %*% t(R) %*% beta.hat
+  }
   chisq.bound <- qchisq(1 - alpha, df = (Tt - 2) * k)
   p.value <- 1 - pchisq(wald, df = (Tt - 2) * k)
   
@@ -107,7 +120,8 @@ consistency.within.est <- function(
     imhof.value <- function (point) { 
       (1 - CompQuadForm::imhof(q = point, lambda = evs)$Qq - (1 - alpha))
     }
-    gen.chisq.bound <- uniroot(imhof.value, c(0, 5))$root
+    #gen.chisq.bound <- uniroot(imhof.value, c(0, 5))$root
+    gen.chisq.bound <- NA
     gen.p.value <- CompQuadForm::imhof(q = gen.wald, lambda = evs)$Qq
   } else {
     gen.wald <- NA
@@ -136,6 +150,7 @@ consistency.within.est <- function(
     beta.hat.unstacked = beta.hat.unstacked,
     beta.std.err.unstacked = beta.std.err.unstacked,
     Sigma.hat = Sigma.hat,
+    rss = rss, tss = tss, R.sq = R.sq,
     wald = wald,
     chisq.bound = chisq.bound,
     p.value = p.value,
@@ -158,7 +173,8 @@ plot.ConsistencyWithinEstimator <- function (object, ...)
   par(
     mfrow = c(plt.row, plt.col),
     mar = c(5.1, 4.1, 0.1, 2.1),
-    oma = c(0, 0, 4, 0)
+    oma = c(0, 0, 4, 0),
+    cex = 1
   )
   
   for (row in 1:object$k) {

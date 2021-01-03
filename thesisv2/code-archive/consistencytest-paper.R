@@ -9,7 +9,7 @@ consistency.within.est.paper <- function(
   group.index,
   time.index,
   alpha = 0.05,
-  no.ginv = FALSE) {
+  no.gen = FALSE) {
   
   # within estimator
   form <- as.formula(paste(dep.var, paste(indep.vars, collapse=" + "), sep=" ~ "))
@@ -85,19 +85,32 @@ consistency.within.est.paper <- function(
     middle.term.wald <- middle.term.wald + t(R) %*% u.i %*% t(u.i) %*% R
   }
   
-  
-  # Wald statistic 
-  if (no.ginv) {
-    wald <- t(beta.hat) %*% R %*% t(R) %*% beta.hat
-    chisq.bound <- NULL
-  } else {
-    #wald <- t(beta.hat) %*% R %*% solve(middle.term.wald) %*% t(R) %*% beta.hat
-    wald <- t(beta.hat) %*% R %*% MASS::ginv(middle.term.wald) %*% t(R) %*% beta.hat
-    chisq.bound <- qchisq(1 - alpha, df = (Tt - 2) * k)
-  }
-  
   Sigma.hat <-  middle.uu
   beta.std.err <- sqrt(diag(Sigma.hat) / n)
+  
+  
+  # Wald statistic 
+  wald <- t(beta.hat) %*% R %*% MASS::ginv(middle.term.wald) %*% t(R) %*% beta.hat
+  chisq.bound <- qchisq(1 - alpha, df = (Tt - 2) * k)
+  p.value <- 1 - pchisq(wald, df = (Tt - 2) * k)
+  
+  
+  # Gen Wald statistic
+  if (!no.gen) {
+    gen.wald <- t(beta.hat) %*% R %*% t(R) %*% beta.hat
+    
+    Sigma.R <- t(R) %*% Sigma.hat %*% R
+    evs <- eigen(Sigma.R)$values
+    
+    gen.chisq.bound <- NA
+    gen.p.value <- CompQuadForm::imhof(q = gen.wald, lambda = evs)$Qq
+  } else {
+    gen.wald <- NA
+    gen.chisq.bound <- NA
+    gen.p.value <- NA
+  }
+  
+  
   
   
   # necessary for plotting
@@ -113,15 +126,20 @@ consistency.within.est.paper <- function(
   
   # return object
   consist.test <- list(
+    k = k, n = n, Tt = Tt, R = R, B = B, alpha = alpha,
     within.est = within.est,
     beta.hat = beta.hat,
     beta.std.err = beta.std.err,
     beta.hat.unstacked = beta.hat.unstacked,
     beta.std.err.unstacked = beta.std.err.unstacked,
     Sigma.hat = Sigma.hat,
+    #rss = rss, tss = tss, R.sq = R.sq,
     wald = wald,
     chisq.bound = chisq.bound,
-    k = k, n = n, Tt = Tt, R = R, B = B, alpha = alpha, no.ginv = no.ginv)
+    p.value = p.value,
+    gen.wald = gen.wald,
+    gen.chisq.bound = gen.chisq.bound,
+    gen.p.value = gen.p.value)
   class(consist.test) <- "ConsistencyWithinEstimator"
   consist.test
 }

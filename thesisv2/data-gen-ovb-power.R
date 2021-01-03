@@ -5,8 +5,8 @@ data.gen.ovb.power <- function (nobs, rho.lag, nperson = 5000) {
   eta.sd <- 0.6
   # this should be changed to use theta.sd**2 and eta.sd**2 (ONLY IF THERE IS TIME)
   theta.eta.cov <- rbind(
-    c(0.6, -0.216),
-    c(-0.216, 0.6))
+    c(theta.sd**2, -0.216),
+    c(-0.216, eta.sd**2))
   
   beta1 <- 0 # intercept
   beta2 <- 2
@@ -38,13 +38,13 @@ data.gen.ovb.power <- function (nobs, rho.lag, nperson = 5000) {
       arima.sim(n  = nobs, model = list(ar = delta.lag), innov = ar.errs[, 2])
   }
   
-  eps <- rnorm(nobs * nperson, mean = 0, sd = eps.sd)
+  fulldata$eps <- rnorm(nobs * nperson, mean = 0, sd = eps.sd)
   
   fulldata$y <- 
     beta1 + 
     beta2 * fulldata$x2 + 
     gamma * fulldata$z +
-    eps
+    fulldata$eps
   
   fulldata <- as.data.table(fulldata)
 }
