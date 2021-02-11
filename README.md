@@ -1,7 +1,10 @@
 # Comparison of the Spierdijk-Wansbeek test and its unweighted counterpart
-## BSc Thesis Bastiaan Boland at the Rijksuniversiteit Groningen
+## B.Sc. Thesis Bastiaan Boland at the Rijksuniversiteit Groningen
 Supervisor: T. J. Wansbeek
+
 Grade: 8
+
+[Click here to read.](FinalThesisBastiaanBoland.pdf)
 
 ### Abstract
 The new Spierdijk-Wansbeek test promises to be a new entry in the standard toolbox for 
